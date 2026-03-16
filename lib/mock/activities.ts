@@ -1,0 +1,26 @@
+import { ActivityItem } from "@/lib/types";
+
+export const mockActivities: ActivityItem[] = [
+  { id: "act-001", type: "ai_draft", description: "넥스트커머스 이서연 담당자를 위한 콜드메일 초안이 생성되었습니다.", timestamp: "2026-03-16T09:30:00", accountName: "넥스트커머스", contactName: "이서연" },
+  { id: "act-002", type: "review", description: "스마트팩토리솔루션즈 정우성 대표님 메일 초안 검토가 완료되었습니다.", timestamp: "2026-03-16T09:15:00", accountName: "스마트팩토리솔루션즈", contactName: "정우성" },
+  { id: "act-003", type: "approval_request", description: "프레시밀 서동민 본부장님 메일 승인 요청이 등록되었습니다.", timestamp: "2026-03-16T08:45:00", accountName: "프레시밀", contactName: "서동민" },
+  { id: "act-004", type: "sent", description: "클라우드빌더 김나리 디렉터에게 팔로업 메일이 발송되었습니다.", timestamp: "2026-03-16T08:30:00", accountName: "클라우드빌더", contactName: "김나리" },
+  { id: "act-005", type: "reply", description: "그린텍제조 안경호 상무님으로부터 답장이 도착했습니다. '관심 있음'으로 태깅됨.", timestamp: "2026-03-16T08:00:00", accountName: "그린텍제조", contactName: "안경호" },
+  { id: "act-006", type: "meeting", description: "원스톱HR 미팅이 확정되었습니다. 3월 18일 오후 2시.", timestamp: "2026-03-15T17:30:00", accountName: "원스톱HR" },
+  { id: "act-007", type: "ai_draft", description: "피플웍스 강민수 CEO를 위한 콜드메일 초안이 생성되었습니다.", timestamp: "2026-03-15T16:00:00", accountName: "피플웍스", contactName: "강민수" },
+  { id: "act-008", type: "note", description: "로지스원 관련 메모: 동남아 확장 건으로 해외사업부 접근 추천", timestamp: "2026-03-15T15:30:00", accountName: "로지스원" },
+  { id: "act-009", type: "sent", description: "에듀플러스 나영지 대표에게 첫 번째 콜드메일이 발송되었습니다.", timestamp: "2026-03-15T14:00:00", accountName: "에듀플러스", contactName: "나영지" },
+  { id: "act-010", type: "excluded", description: "웰빙케어가 리드에서 제외 처리되었습니다. 사유: 내부 구조조정 중", timestamp: "2026-03-15T13:30:00", accountName: "웰빙케어" },
+  { id: "act-011", type: "review", description: "메가푸드시스템 문성현 부사장님 메일 초안 검토 완료", timestamp: "2026-03-15T11:00:00", accountName: "메가푸드시스템", contactName: "문성현" },
+  { id: "act-012", type: "ai_draft", description: "인포매틱스코리아 고승원 VP를 위한 콜드메일 초안이 생성되었습니다.", timestamp: "2026-03-15T10:30:00", accountName: "인포매틱스코리아", contactName: "고승원" },
+  { id: "act-013", type: "reply", description: "인포매틱스코리아 신동혁 CRO로부터 답장 도착. 관련 부서로 전달됨.", timestamp: "2026-03-15T10:00:00", accountName: "인포매틱스코리아", contactName: "신동혁" },
+  { id: "act-014", type: "approval_request", description: "로지스원 조현우 전무님 메일 승인 요청이 등록되었습니다.", timestamp: "2026-03-14T16:00:00", accountName: "로지스원", contactName: "조현우" },
+  { id: "act-015", type: "sent", description: "유니온물류 영업팀장에게 첫 콜드메일이 발송되었습니다.", timestamp: "2026-03-14T14:30:00", accountName: "유니온물류" },
+  { id: "act-016", type: "ai_draft", description: "리테일플러스를 위한 콜드메일 초안이 생성되었습니다.", timestamp: "2026-03-14T13:00:00", accountName: "리테일플러스" },
+  { id: "act-017", type: "meeting", description: "그린텍제조 안경호 상무님과 미팅이 확정되었습니다.", timestamp: "2026-03-14T11:00:00", accountName: "그린텍제조", contactName: "안경호" },
+  { id: "act-018", type: "review", description: "빠른배송 메일 초안 검토 완료", timestamp: "2026-03-14T10:00:00", accountName: "빠른배송" },
+  { id: "act-019", type: "sent", description: "프리미엄팩토리 대표에게 첫 콜드메일이 발송되었습니다.", timestamp: "2026-03-13T16:00:00", accountName: "프리미엄팩토리" },
+  { id: "act-020", type: "note", description: "맛나프랜차이즈 해외 진출 건 리서치 메모 추가", timestamp: "2026-03-13T14:00:00", accountName: "맛나프랜차이즈" },
+  { id: "act-021", type: "ai_draft", description: "케이매뉴팩처링 영업기획팀 대상 콜드메일 초안 생성", timestamp: "2026-03-13T11:00:00", accountName: "케이매뉴팩처링" },
+  { id: "act-022", type: "reply", description: "원스톱HR로부터 긍정적 답장 수신. 미팅 일정 조율 중.", timestamp: "2026-03-12T15:00:00", accountName: "원스톱HR" },
+];
