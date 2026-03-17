@@ -166,15 +166,15 @@ export default function DashboardPage() {
               <div className="mt-3 space-y-3">
                 <div className="rounded-lg bg-gray-50 p-3">
                   <p className="text-xs font-medium text-gray-900">우선 공략 업종</p>
-                  <p className="mt-0.5 text-sm text-gray-500">HR/복지 업종의 답장률이 30%로 가장 높습니다</p>
+                  <p className="mt-0.5 text-sm text-gray-500">게임 업계 답장률 30%로 최고, IT/플랫폼 26.3% 순</p>
                 </div>
                 <div className="rounded-lg bg-gray-50 p-3">
                   <p className="text-xs font-medium text-gray-900">추천 발송 시간대</p>
-                  <p className="mt-0.5 text-sm text-gray-500">오전 10시~11시 발송 시 답장률이 24.2%로 최고</p>
+                  <p className="mt-0.5 text-sm text-gray-500">오전 10시~11시 발송 시 HR 담당자 답장률 24.2%로 최고</p>
                 </div>
                 <div className="rounded-lg bg-gray-50 p-3">
-                  <p className="text-xs font-medium text-gray-900">주의할 표현</p>
-                  <p className="mt-0.5 text-sm text-gray-500">&apos;무조건&apos;, &apos;최고의&apos; 등 과장 표현 3건 감지됨</p>
+                  <p className="text-xs font-medium text-gray-900">핵심 어필 포인트</p>
+                  <p className="mt-0.5 text-sm text-gray-500">전국 4,000개 시설, 포인트 방식 정산 간편성이 반응 높음</p>
                 </div>
               </div>
             </div>
