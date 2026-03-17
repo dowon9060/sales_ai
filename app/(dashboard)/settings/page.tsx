@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Save, Plus, X, Eye, CheckCircle } from "lucide-react";
-import { mockTemplates, mockBannedExpressions, mockTeamMembers } from "@/lib/mock";
+import { Save, Plus, X, CheckCircle, Trash2, Edit2 } from "lucide-react";
+import { useAppStore } from "@/lib/store";
 import { PageHeader } from "@/components/shared/page-header";
-import { StatusBadge } from "@/components/shared/status-badge";
 
 const tabs = [
   { id: "general", label: "기본 설정" },
@@ -15,6 +14,17 @@ const tabs = [
 ];
 
 export default function SettingsPage() {
+  const templates = useAppStore((s) => s.templates);
+  const addTemplate = useAppStore((s) => s.addTemplate);
+  const updateTemplate = useAppStore((s) => s.updateTemplate);
+  const deleteTemplate = useAppStore((s) => s.deleteTemplate);
+  const bannedExpressions = useAppStore((s) => s.bannedExpressions);
+  const setBannedExpressions = useAppStore((s) => s.setBannedExpressions);
+  const teamMembers = useAppStore((s) => s.teamMembers);
+  const addTeamMember = useAppStore((s) => s.addTeamMember);
+  const updateTeamMember = useAppStore((s) => s.updateTeamMember);
+  const deleteTeamMember = useAppStore((s) => s.deleteTeamMember);
+
   const [activeTab, setActiveTab] = useState("general");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -24,15 +34,35 @@ export default function SettingsPage() {
   const [signature, setSignature] = useState("김영수 | 영업팀 리드\nSalesAI\nys.kim@company.com");
 
   // Templates
-  const [selectedTemplate, setSelectedTemplate] = useState(mockTemplates[0]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState(templates[0]?.id ?? "");
+  const [editingTemplate, setEditingTemplate] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editSubject, setEditSubject] = useState("");
+  const [editBody, setEditBody] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [showNewTemplate, setShowNewTemplate] = useState(false);
+  const [newTmplName, setNewTmplName] = useState("");
+  const [newTmplSubject, setNewTmplSubject] = useState("");
+  const [newTmplBody, setNewTmplBody] = useState("");
+  const [newTmplCategory, setNewTmplCategory] = useState("초기 접촉");
 
   // Compliance
-  const [bannedWords, setBannedWords] = useState(mockBannedExpressions);
   const [newBannedWord, setNewBannedWord] = useState("");
 
   // Approval
   const [approvalRequired, setApprovalRequired] = useState(true);
-  const [approver, setApprover] = useState("이지현");
+  const [approver, setApprover] = useState(() => {
+    const mgr = teamMembers.find((m) => m.role !== "member");
+    return mgr?.name ?? "";
+  });
+
+  // Team member add
+  const [showNewMember, setShowNewMember] = useState(false);
+  const [newMemberName, setNewMemberName] = useState("");
+  const [newMemberEmail, setNewMemberEmail] = useState("");
+  const [newMemberRole, setNewMemberRole] = useState<"admin" | "manager" | "member">("member");
+
+  const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -40,10 +70,77 @@ export default function SettingsPage() {
   }, []);
 
   const addBannedWord = () => {
-    if (newBannedWord.trim() && !bannedWords.includes(newBannedWord.trim())) {
-      setBannedWords([...bannedWords, newBannedWord.trim()]);
+    if (newBannedWord.trim() && !bannedExpressions.includes(newBannedWord.trim())) {
+      setBannedExpressions([...bannedExpressions, newBannedWord.trim()]);
       setNewBannedWord("");
+      showToast("금지 표현이 추가되었습니다");
     }
+  };
+
+  const removeBannedWord = (word: string) => {
+    setBannedExpressions(bannedExpressions.filter((w) => w !== word));
+  };
+
+  const startEditTemplate = () => {
+    if (!selectedTemplate) return;
+    setEditName(selectedTemplate.name);
+    setEditSubject(selectedTemplate.subject);
+    setEditBody(selectedTemplate.body);
+    setEditCategory(selectedTemplate.category);
+    setEditingTemplate(true);
+  };
+
+  const saveEditTemplate = () => {
+    if (!selectedTemplate) return;
+    updateTemplate(selectedTemplate.id, {
+      name: editName,
+      subject: editSubject,
+      body: editBody,
+      category: editCategory,
+    });
+    setEditingTemplate(false);
+    showToast("템플릿이 수정되었습니다");
+  };
+
+  const handleAddTemplate = () => {
+    if (!newTmplName.trim()) return;
+    const id = addTemplate({
+      name: newTmplName.trim(),
+      subject: newTmplSubject.trim(),
+      body: newTmplBody.trim(),
+      category: newTmplCategory,
+    });
+    setSelectedTemplateId(id);
+    setShowNewTemplate(false);
+    setNewTmplName("");
+    setNewTmplSubject("");
+    setNewTmplBody("");
+    setNewTmplCategory("초기 접촉");
+    showToast("템플릿이 추가되었습니다");
+  };
+
+  const handleDeleteTemplate = (id: string) => {
+    deleteTemplate(id);
+    if (selectedTemplateId === id) {
+      const remaining = templates.filter((t) => t.id !== id);
+      setSelectedTemplateId(remaining[0]?.id ?? "");
+    }
+    showToast("템플릿이 삭제되었습니다");
+  };
+
+  const handleAddMember = () => {
+    if (!newMemberName.trim() || !newMemberEmail.trim()) return;
+    addTeamMember({
+      name: newMemberName.trim(),
+      email: newMemberEmail.trim(),
+      role: newMemberRole,
+      status: "active",
+    });
+    setShowNewMember(false);
+    setNewMemberName("");
+    setNewMemberEmail("");
+    setNewMemberRole("member");
+    showToast("팀원이 추가되었습니다");
   };
 
   return (
@@ -112,44 +209,187 @@ export default function SettingsPage() {
               <h3 className="text-sm font-semibold text-gray-900">템플릿 목록</h3>
             </div>
             <div className="space-y-1 p-2">
-              {mockTemplates.map((tmpl) => (
-                <button
-                  key={tmpl.id}
-                  onClick={() => setSelectedTemplate(tmpl)}
-                  className={`w-full rounded-lg px-3 py-2.5 text-left transition-colors ${
-                    selectedTemplate.id === tmpl.id ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <p className="text-sm font-medium">{tmpl.name}</p>
-                  <p className="mt-0.5 text-xs text-gray-500">{tmpl.category}</p>
-                </button>
+              {templates.map((tmpl) => (
+                <div key={tmpl.id} className="group flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      setSelectedTemplateId(tmpl.id);
+                      setEditingTemplate(false);
+                    }}
+                    className={`flex-1 rounded-lg px-3 py-2.5 text-left transition-colors ${
+                      selectedTemplateId === tmpl.id ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    <p className="text-sm font-medium">{tmpl.name}</p>
+                    <p className="mt-0.5 text-xs text-gray-500">{tmpl.category}</p>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteTemplate(tmpl.id)}
+                    className="rounded p-1 text-gray-300 opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               ))}
             </div>
             <div className="border-t border-gray-100 p-2">
-              <button className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 hover:border-blue-400 hover:text-blue-600">
+              <button
+                onClick={() => setShowNewTemplate(true)}
+                className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 hover:border-blue-400 hover:text-blue-600"
+              >
                 <Plus className="h-4 w-4" /> 템플릿 추가
               </button>
             </div>
           </div>
 
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h3 className="text-base font-semibold text-gray-900">{selectedTemplate.name}</h3>
-            <div className="mt-4 space-y-4">
-              <div>
-                <label className="text-xs font-medium text-gray-500">카테고리</label>
-                <p className="mt-0.5 text-sm text-gray-700">{selectedTemplate.category}</p>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500">제목 템플릿</label>
-                <div className="mt-1 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">{selectedTemplate.subject}</div>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500">본문 템플릿</label>
-                <div className="mt-1 whitespace-pre-line rounded-lg bg-gray-50 p-3 text-sm leading-relaxed text-gray-700">
-                  {selectedTemplate.body}
+            {showNewTemplate ? (
+              <>
+                <h3 className="text-base font-semibold text-gray-900">새 템플릿 추가</h3>
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500">이름</label>
+                    <input
+                      type="text"
+                      value={newTmplName}
+                      onChange={(e) => setNewTmplName(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="템플릿 이름"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500">카테고리</label>
+                    <input
+                      type="text"
+                      value={newTmplCategory}
+                      onChange={(e) => setNewTmplCategory(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500">제목 템플릿</label>
+                    <input
+                      type="text"
+                      value={newTmplSubject}
+                      onChange={(e) => setNewTmplSubject(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="제목을 입력하세요"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500">본문 템플릿</label>
+                    <textarea
+                      value={newTmplBody}
+                      onChange={(e) => setNewTmplBody(e.target.value)}
+                      rows={6}
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="본문을 입력하세요"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleAddTemplate}
+                      className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                    >
+                      <Save className="h-4 w-4" /> 저장
+                    </button>
+                    <button
+                      onClick={() => setShowNewTemplate(false)}
+                      className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      취소
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </>
+            ) : selectedTemplate ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-semibold text-gray-900">{selectedTemplate.name}</h3>
+                  {!editingTemplate && (
+                    <button
+                      onClick={startEditTemplate}
+                      className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" /> 수정
+                    </button>
+                  )}
+                </div>
+                {editingTemplate ? (
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <label className="text-xs font-medium text-gray-500">이름</label>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500">카테고리</label>
+                      <input
+                        type="text"
+                        value={editCategory}
+                        onChange={(e) => setEditCategory(e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500">제목 템플릿</label>
+                      <input
+                        type="text"
+                        value={editSubject}
+                        onChange={(e) => setEditSubject(e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500">본문 템플릿</label>
+                      <textarea
+                        value={editBody}
+                        onChange={(e) => setEditBody(e.target.value)}
+                        rows={6}
+                        className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={saveEditTemplate}
+                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                      >
+                        <Save className="h-4 w-4" /> 저장
+                      </button>
+                      <button
+                        onClick={() => setEditingTemplate(false)}
+                        className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        취소
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <label className="text-xs font-medium text-gray-500">카테고리</label>
+                      <p className="mt-0.5 text-sm text-gray-700">{selectedTemplate.category}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500">제목 템플릿</label>
+                      <div className="mt-1 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">{selectedTemplate.subject}</div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500">본문 템플릿</label>
+                      <div className="mt-1 whitespace-pre-line rounded-lg bg-gray-50 p-3 text-sm leading-relaxed text-gray-700">
+                        {selectedTemplate.body}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="py-12 text-center text-sm text-gray-500">템플릿을 선택하세요</p>
+            )}
           </div>
         </div>
       )}
@@ -160,14 +400,14 @@ export default function SettingsPage() {
             <h2 className="text-base font-semibold text-gray-900">금지 표현 관리</h2>
             <p className="mt-1 text-sm text-gray-500">아래 표현이 이메일에 포함되면 검수 시 경고가 표시됩니다</p>
             <div className="mt-4 flex flex-wrap gap-2">
-              {bannedWords.map((word) => (
+              {bannedExpressions.map((word) => (
                 <span
                   key={word}
                   className="inline-flex items-center gap-1 rounded-full bg-red-50 px-3 py-1 text-sm text-red-700"
                 >
                   {word}
                   <button
-                    onClick={() => setBannedWords(bannedWords.filter((w) => w !== word))}
+                    onClick={() => removeBannedWord(word)}
                     className="text-red-400 hover:text-red-600"
                   >
                     <X className="h-3 w-3" />
@@ -247,7 +487,7 @@ export default function SettingsPage() {
                   onChange={(e) => setApprover(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
-                  {mockTeamMembers
+                  {teamMembers
                     .filter((m) => m.role !== "member")
                     .map((m) => (
                       <option key={m.id} value={m.name}>{m.name} ({m.role === "admin" ? "관리자" : "팀장"})</option>
@@ -288,9 +528,67 @@ export default function SettingsPage() {
 
       {activeTab === "team" && (
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="border-b border-gray-100 px-5 py-4">
+          <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
             <h2 className="text-base font-semibold text-gray-900">팀원 관리</h2>
+            <button
+              onClick={() => setShowNewMember(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4" /> 팀원 추가
+            </button>
           </div>
+
+          {showNewMember && (
+            <div className="border-b border-gray-100 bg-blue-50/30 px-5 py-4">
+              <div className="flex flex-wrap items-end gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-500">이름</label>
+                  <input
+                    type="text"
+                    value={newMemberName}
+                    onChange={(e) => setNewMemberName(e.target.value)}
+                    className="mt-1 block w-40 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="이름"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500">이메일</label>
+                  <input
+                    type="email"
+                    value={newMemberEmail}
+                    onChange={(e) => setNewMemberEmail(e.target.value)}
+                    className="mt-1 block w-56 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="email@company.com"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500">역할</label>
+                  <select
+                    value={newMemberRole}
+                    onChange={(e) => setNewMemberRole(e.target.value as "admin" | "manager" | "member")}
+                    className="mt-1 block w-28 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="member">팀원</option>
+                    <option value="manager">팀장</option>
+                    <option value="admin">관리자</option>
+                  </select>
+                </div>
+                <button
+                  onClick={handleAddMember}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  추가
+                </button>
+                <button
+                  onClick={() => setShowNewMember(false)}
+                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  취소
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -299,10 +597,11 @@ export default function SettingsPage() {
                   <th className="px-5 py-3">이메일</th>
                   <th className="px-5 py-3">역할</th>
                   <th className="px-5 py-3">상태</th>
+                  <th className="px-5 py-3">액션</th>
                 </tr>
               </thead>
               <tbody>
-                {mockTeamMembers.map((member) => (
+                {teamMembers.map((member) => (
                   <tr key={member.id} className="border-b border-gray-50 transition-colors hover:bg-gray-50">
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
@@ -334,6 +633,14 @@ export default function SettingsPage() {
                       >
                         {member.status === "active" ? "활성" : "비활성"}
                       </span>
+                    </td>
+                    <td className="px-5 py-3">
+                      <button
+                        onClick={() => deleteTeamMember(member.id)}
+                        className="rounded p-1 text-gray-400 hover:text-red-500"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -12,6 +12,7 @@ import {
   XCircle,
   Pause,
   Play,
+  CheckCircle,
 } from "lucide-react";
 import {
   BarChart,
@@ -26,10 +27,9 @@ import {
   Cell,
   Legend,
 } from "recharts";
-import { mockCampaigns, mockCampaignLeads } from "@/lib/mock";
+import { useAppStore } from "@/lib/store";
 import { KpiCard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { CampaignStatus } from "@/lib/types";
 
 const COLORS = ["#22c55e", "#eab308", "#3b82f6", "#ef4444", "#6b7280"];
 
@@ -37,8 +37,12 @@ export default function CampaignDetailPage() {
   const params = useParams();
   const campaignId = params.id as string;
 
-  const [campaign, setCampaign] = useState(() => mockCampaigns.find((c) => c.id === campaignId));
-  const leads = mockCampaignLeads[campaignId] || [];
+  const campaigns = useAppStore((s) => s.campaigns);
+  const campaignLeads = useAppStore((s) => s.campaignLeads);
+  const updateCampaign = useAppStore((s) => s.updateCampaign);
+
+  const campaign = useMemo(() => campaigns.find((c) => c.id === campaignId), [campaigns, campaignId]);
+  const leads = campaignLeads[campaignId] || [];
 
   if (!campaign) {
     return (
@@ -62,14 +66,12 @@ export default function CampaignDetailPage() {
     });
 
   const togglePause = () => {
-    setCampaign((prev) =>
-      prev
-        ? {
-            ...prev,
-            status: (prev.status === "paused" ? "active" : "paused") as CampaignStatus,
-          }
-        : prev
-    );
+    const newStatus = campaign.status === "paused" ? "active" : "paused";
+    updateCampaign(campaignId, { status: newStatus });
+  };
+
+  const completeCampaign = () => {
+    updateCampaign(campaignId, { status: "completed" });
   };
 
   return (
@@ -92,26 +94,36 @@ export default function CampaignDetailPage() {
               {campaign.endDate && <span>종료 예정: {campaign.endDate}</span>}
             </div>
           </div>
-          {(campaign.status === "active" || campaign.status === "paused") && (
-            <button
-              onClick={togglePause}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${
-                campaign.status === "active"
-                  ? "border border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
-                  : "border border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
-              }`}
-            >
-              {campaign.status === "active" ? (
-                <>
-                  <Pause className="h-4 w-4" /> 일시 중지
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4" /> 재개
-                </>
-              )}
-            </button>
-          )}
+          <div className="flex gap-2">
+            {(campaign.status === "active" || campaign.status === "paused") && (
+              <>
+                <button
+                  onClick={togglePause}
+                  className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${
+                    campaign.status === "active"
+                      ? "border border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
+                      : "border border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
+                  }`}
+                >
+                  {campaign.status === "active" ? (
+                    <>
+                      <Pause className="h-4 w-4" /> 일시 중지
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4" /> 재개
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={completeCampaign}
+                  className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+                >
+                  <CheckCircle className="h-4 w-4" /> 완료 처리
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

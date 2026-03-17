@@ -3,8 +3,8 @@
 import { useState, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Users, Mail, FileText, Building2, X } from "lucide-react";
-import { mockContacts, mockAccounts } from "@/lib/mock";
+import { Users, Mail, FileText, Building2, X, Plus, Trash2 } from "lucide-react";
+import { useAppStore } from "@/lib/store";
 import { Contact, ContactRole } from "@/lib/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { SearchInput } from "@/components/shared/search-input";
@@ -18,22 +18,42 @@ const roleTabs: { value: ContactRole | "all"; label: string }[] = [
   { value: "unknown", label: "미분류" },
 ];
 
+const roleOptions: { value: ContactRole; label: string }[] = [
+  { value: "decision_maker", label: "의사결정권자" },
+  { value: "influencer", label: "영향자" },
+  { value: "practitioner", label: "실무자" },
+  { value: "unknown", label: "미분류" },
+];
+
 function ContactsContent() {
   const searchParams = useSearchParams();
   const accountIdFilter = searchParams.get("accountId");
+
+  const contacts = useAppStore((s) => s.contacts);
+  const accounts = useAppStore((s) => s.accounts);
+  const addContact = useAppStore((s) => s.addContact);
+  const deleteContact = useAppStore((s) => s.deleteContact);
 
   const [search, setSearch] = useState("");
   const [roleTab, setRoleTab] = useState<ContactRole | "all">("all");
   const [companyFilter, setCompanyFilter] = useState(accountIdFilter ?? "all");
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const [newName, setNewName] = useState("");
+  const [newTitle, setNewTitle] = useState("");
+  const [newDepartment, setNewDepartment] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newRole, setNewRole] = useState<ContactRole>("unknown");
+  const [newAccountId, setNewAccountId] = useState("");
 
   const companies = useMemo(() => {
-    const names = Array.from(new Set(mockContacts.map((c) => c.accountName)));
+    const names = Array.from(new Set(contacts.map((c) => c.accountName)));
     return names.sort();
-  }, []);
+  }, [contacts]);
 
   const filteredContacts = useMemo(() => {
-    return mockContacts.filter((c) => {
+    return contacts.filter((c) => {
       const matchSearch =
         !search ||
         c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -45,7 +65,41 @@ function ContactsContent() {
         c.accountName === companyFilter;
       return matchSearch && matchRole && matchCompany;
     });
-  }, [search, roleTab, companyFilter]);
+  }, [search, roleTab, companyFilter, contacts]);
+
+  const resetForm = () => {
+    setNewName("");
+    setNewTitle("");
+    setNewDepartment("");
+    setNewEmail("");
+    setNewRole("unknown");
+    setNewAccountId("");
+  };
+
+  const handleCreateContact = () => {
+    if (!newName.trim() || !newAccountId) return;
+    const account = accounts.find((a) => a.id === newAccountId);
+    addContact({
+      accountId: newAccountId,
+      accountName: account?.name ?? "",
+      name: newName.trim(),
+      title: newTitle.trim(),
+      department: newDepartment.trim(),
+      email: newEmail.trim(),
+      role: newRole,
+      aiConfidence: 50,
+      emailStatus: "unverified",
+      recommendedApproach: "",
+      recommendedFirstLine: "",
+    });
+    resetForm();
+    setShowCreateModal(false);
+  };
+
+  const handleDeleteContact = (id: string) => {
+    if (selectedContact?.id === id) setSelectedContact(null);
+    deleteContact(id);
+  };
 
   return (
     <div className="space-y-6">
@@ -64,6 +118,13 @@ function ContactsContent() {
               <option key={name} value={name}>{name}</option>
             ))}
           </select>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="ml-auto flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4" />
+            담당자 추가
+          </button>
         </div>
       </div>
 
@@ -102,7 +163,19 @@ function ContactsContent() {
                     <p className="text-sm font-semibold text-gray-900">{contact.name}</p>
                     <p className="text-xs text-gray-500">{contact.title}</p>
                   </div>
-                  <StatusBadge type="role" value={contact.role} />
+                  <div className="flex items-center gap-1.5">
+                    <StatusBadge type="role" value={contact.role} />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteContact(contact.id);
+                      }}
+                      className="rounded-md p-1 text-gray-400 hover:bg-red-50 hover:text-red-500"
+                      title="삭제"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
                   <Building2 className="h-3 w-3" />
@@ -203,6 +276,105 @@ function ContactsContent() {
           </div>
         )}
       </div>
+
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">담당자 추가</h3>
+              <button onClick={() => { setShowCreateModal(false); resetForm(); }} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="mt-5 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700">이름 *</label>
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="홍길동"
+                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">직책</label>
+                  <input
+                    type="text"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="부장"
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">부서</label>
+                  <input
+                    type="text"
+                    value={newDepartment}
+                    onChange={(e) => setNewDepartment(e.target.value)}
+                    placeholder="영업팀"
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">이메일</label>
+                <input
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="name@company.com"
+                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">역할</label>
+                  <select
+                    value={newRole}
+                    onChange={(e) => setNewRole(e.target.value as ContactRole)}
+                    className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    {roleOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">회사 *</label>
+                  <select
+                    value={newAccountId}
+                    onChange={(e) => setNewAccountId(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="">회사 선택</option>
+                    {accounts.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => { setShowCreateModal(false); resetForm(); }}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleCreateContact}
+                disabled={!newName.trim() || !newAccountId}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                추가
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

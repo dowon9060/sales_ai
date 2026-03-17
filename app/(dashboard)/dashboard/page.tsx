@@ -27,7 +27,8 @@ import { KpiCard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ScoreBadge } from "@/components/shared/score-badge";
 import { PageHeader } from "@/components/shared/page-header";
-import { mockAccounts, mockActivities, industryReplyRates } from "@/lib/mock";
+import { useAppStore } from "@/lib/store";
+import { industryReplyRates } from "@/lib/mock";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 
@@ -43,16 +44,49 @@ const activityIcons: Record<string, typeof Send> = {
 };
 
 export default function DashboardPage() {
+  const accounts = useAppStore((s) => s.accounts);
+  const activities = useAppStore((s) => s.activities);
+
+  const totalLeads = accounts.length;
+
+  const todayRecommended = useMemo(
+    () => accounts.filter((a) => a.status !== "excluded" && a.aiScore >= 80).length,
+    [accounts]
+  );
+
+  const pendingSend = useMemo(
+    () => accounts.filter((a) => a.status === "scheduled" || a.status === "pending_approval").length,
+    [accounts]
+  );
+
+  const replyRate = useMemo(() => {
+    const sent = accounts.filter((a) => a.status === "sent").length;
+    const replied = accounts.filter((a) => a.status === "replied").length;
+    const total = sent + replied;
+    if (total === 0) return "0%";
+    return `${((replied / total) * 100).toFixed(1)}%`;
+  }, [accounts]);
+
+  const meetingCount = useMemo(
+    () => accounts.filter((a) => a.status === "meeting_booked").length,
+    [accounts]
+  );
+
+  const pendingApproval = useMemo(
+    () => accounts.filter((a) => a.status === "pending_approval").length,
+    [accounts]
+  );
+
   const recommendedLeads = useMemo(
     () =>
-      mockAccounts
+      accounts
         .filter((a) => a.status !== "excluded")
         .sort((a, b) => b.aiScore - a.aiScore)
         .slice(0, 8),
-    []
+    [accounts]
   );
 
-  const recentActivities = mockActivities.slice(0, 8);
+  const recentActivities = useMemo(() => activities.slice(0, 8), [activities]);
 
   return (
     <div className="space-y-6">
@@ -62,12 +96,12 @@ export default function DashboardPage() {
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
-        <KpiCard title="전체 리드" value={mockAccounts.length} change={12.5} icon={Users} />
-        <KpiCard title="오늘 추천 리드" value={5} change={25.0} icon={Target} />
-        <KpiCard title="발송 예정" value={8} change={-5.3} icon={Send} />
-        <KpiCard title="답장률" value="23.4%" change={8.2} icon={MessageSquare} />
-        <KpiCard title="미팅 전환" value={4} change={33.3} icon={Calendar} />
-        <KpiCard title="승인 대기" value={3} icon={Clock} />
+        <KpiCard title="전체 리드" value={totalLeads} icon={Users} />
+        <KpiCard title="오늘 추천 리드" value={todayRecommended} icon={Target} />
+        <KpiCard title="발송 예정" value={pendingSend} icon={Send} />
+        <KpiCard title="답장률" value={replyRate} icon={MessageSquare} />
+        <KpiCard title="미팅 전환" value={meetingCount} icon={Calendar} />
+        <KpiCard title="승인 대기" value={pendingApproval} icon={Clock} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

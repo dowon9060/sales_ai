@@ -3,7 +3,6 @@
 import { useState, useMemo, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  Sparkles,
   Save,
   Clock,
   Send,
@@ -13,11 +12,11 @@ import {
   RefreshCw,
   Building2,
   User,
-  Lightbulb,
-  ShieldAlert,
   FileText,
+  ShieldAlert,
 } from "lucide-react";
-import { mockAccounts, mockContacts, mockEmailDrafts, mockEmailVariants } from "@/lib/mock";
+import { useAppStore } from "@/lib/store";
+import { mockEmailVariants } from "@/lib/mock/emails";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ScoreBadge } from "@/components/shared/score-badge";
@@ -28,26 +27,35 @@ function EmailStudioContent() {
   const accountIdParam = searchParams.get("accountId");
   const contactIdParam = searchParams.get("contactId");
 
+  const accounts = useAppStore((s) => s.accounts);
+  const contacts = useAppStore((s) => s.contacts);
+  const emails = useAppStore((s) => s.emails);
+  const addEmail = useAppStore((s) => s.addEmail);
+  const updateEmail = useAppStore((s) => s.updateEmail);
+  const sendEmailAction = useAppStore((s) => s.sendEmail);
+  const approveEmail = useAppStore((s) => s.approveEmail);
+  const bannedExpressions = useAppStore((s) => s.bannedExpressions);
+
   const account = useMemo(
-    () => (accountIdParam ? mockAccounts.find((a) => a.id === accountIdParam) : null),
-    [accountIdParam]
+    () => (accountIdParam ? accounts.find((a) => a.id === accountIdParam) : null),
+    [accountIdParam, accounts]
   );
   const contact = useMemo(
-    () => (contactIdParam ? mockContacts.find((c) => c.id === contactIdParam) : null),
-    [contactIdParam]
+    () => (contactIdParam ? contacts.find((c) => c.id === contactIdParam) : null),
+    [contactIdParam, contacts]
   );
 
   const existingDraft = useMemo(() => {
     if (accountIdParam && contactIdParam) {
-      return mockEmailDrafts.find(
+      return emails.find(
         (d) => d.accountId === accountIdParam && d.contactId === contactIdParam
       );
     }
     if (accountIdParam) {
-      return mockEmailDrafts.find((d) => d.accountId === accountIdParam);
+      return emails.find((d) => d.accountId === accountIdParam);
     }
-    return mockEmailDrafts[0];
-  }, [accountIdParam, contactIdParam]);
+    return emails[0];
+  }, [accountIdParam, contactIdParam, emails]);
 
   const [subject, setSubject] = useState(existingDraft?.subject ?? "");
   const [body, setBody] = useState(existingDraft?.body ?? "");
@@ -57,6 +65,7 @@ function EmailStudioContent() {
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [draftId, setDraftId] = useState<string | null>(existingDraft?.id ?? null);
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -65,8 +74,7 @@ function EmailStudioContent() {
 
   const reviewItems = useMemo(() => {
     const items: { type: string; message: string; status: ReviewStatus }[] = [];
-    const banned = ["무조건", "최고의", "무료", "공짜", "보장", "완벽한"];
-    const found = banned.filter((w) => body.includes(w) || subject.includes(w));
+    const found = bannedExpressions.filter((w) => body.includes(w) || subject.includes(w));
     if (found.length > 0) {
       items.push({ type: "과장 표현", message: `'${found.join("', '")}' 표현 감지`, status: "revise" });
     } else {
@@ -91,7 +99,7 @@ function EmailStudioContent() {
     items.push({ type: "CTA 적절성", message: "CTA 확인됨", status: "safe" });
 
     return items;
-  }, [body, subject]);
+  }, [body, subject, bannedExpressions]);
 
   const overallReview: ReviewStatus = reviewItems.some((i) => i.status === "revise")
     ? "revise"
@@ -107,19 +115,83 @@ function EmailStudioContent() {
     showToast("AI가 새로운 초안을 생성했습니다");
   };
 
+  const selectedAccount = account || (existingDraft ? accounts.find((a) => a.id === existingDraft.accountId) : null);
+  const selectedContact = contact || (existingDraft ? contacts.find((c) => c.id === existingDraft.contactId) : null);
+
   const handleSaveDraft = () => {
     const now = new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+    if (draftId && existingDraft) {
+      updateEmail(draftId, {
+        subject,
+        body,
+        tone,
+        length,
+        reviewStatus: overallReview,
+        reviewItems: reviewItems.map((ri) => ({
+          type: ri.type as "exaggeration" | "fact_mismatch" | "spam" | "cta",
+          message: ri.message,
+          status: ri.status,
+        })),
+        status: "draft",
+        lastSaved: now,
+      });
+    } else {
+      const id = addEmail({
+        accountId: selectedAccount?.id ?? "",
+        contactId: selectedContact?.id ?? "",
+        subject,
+        body,
+        tone,
+        length,
+        reviewStatus: overallReview,
+        reviewItems: reviewItems.map((ri) => ({
+          type: ri.type as "exaggeration" | "fact_mismatch" | "spam" | "cta",
+          message: ri.message,
+          status: ri.status,
+        })),
+        personalizationPoints: existingDraft?.personalizationPoints || [],
+        status: "draft",
+      });
+      setDraftId(id);
+    }
     setLastSaved(now);
     showToast("초안이 저장되었습니다");
   };
 
   const handleRequestApproval = () => {
+    if (draftId) {
+      updateEmail(draftId, { status: "pending_approval" });
+    } else {
+      const id = addEmail({
+        accountId: selectedAccount?.id ?? "",
+        contactId: selectedContact?.id ?? "",
+        subject,
+        body,
+        tone,
+        length,
+        reviewStatus: overallReview,
+        reviewItems: reviewItems.map((ri) => ({
+          type: ri.type as "exaggeration" | "fact_mismatch" | "spam" | "cta",
+          message: ri.message,
+          status: ri.status,
+        })),
+        personalizationPoints: existingDraft?.personalizationPoints || [],
+        status: "pending_approval",
+      });
+      setDraftId(id);
+    }
     setStatus("pending_approval");
     showToast("승인 요청이 등록되었습니다");
   };
 
-  const selectedAccount = account || (existingDraft ? mockAccounts.find((a) => a.id === existingDraft.accountId) : null);
-  const selectedContact = contact || (existingDraft ? mockContacts.find((c) => c.id === existingDraft.contactId) : null);
+  const handleScheduleSend = () => {
+    if (draftId) {
+      sendEmailAction(draftId);
+    }
+    setShowScheduleModal(false);
+    setStatus("scheduled");
+    showToast("발송이 예약되었습니다");
+  };
 
   if (!selectedAccount && !selectedContact) {
     return (
@@ -189,7 +261,7 @@ function EmailStudioContent() {
 
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 shadow-sm">
             <div className="flex items-center gap-2">
-              <Lightbulb className="h-4 w-4 text-blue-600" />
+              <FileText className="h-4 w-4 text-blue-600" />
               <h3 className="text-sm font-semibold text-blue-900">개인화 포인트</h3>
             </div>
             <ul className="mt-3 space-y-2">
@@ -365,11 +437,7 @@ function EmailStudioContent() {
                 취소
               </button>
               <button
-                onClick={() => {
-                  setShowScheduleModal(false);
-                  setStatus("scheduled");
-                  showToast("발송이 예약되었습니다");
-                }}
+                onClick={handleScheduleSend}
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
                 예약 확인

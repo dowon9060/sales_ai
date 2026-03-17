@@ -10,7 +10,7 @@ import {
   MapPin,
   Users as UsersIcon,
   Mail,
-  Sparkles,
+  FileText,
   TrendingUp,
   Briefcase,
   Newspaper,
@@ -20,11 +20,10 @@ import {
   Clock,
   Send,
   MessageSquare,
-  FileText,
   Calendar,
   XCircle,
 } from "lucide-react";
-import { mockAccounts, mockContacts, mockActivities } from "@/lib/mock";
+import { useAppStore } from "@/lib/store";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ScoreBadge } from "@/components/shared/score-badge";
 import { format } from "date-fns";
@@ -39,8 +38,8 @@ const signalIcons: Record<string, typeof TrendingUp> = {
   efficiency: Gauge,
 };
 
-const activityIcons: Record<string, typeof Sparkles> = {
-  ai_draft: Sparkles,
+const activityIcons: Record<string, typeof FileText> = {
+  ai_draft: FileText,
   review: FileText,
   approval_request: Clock,
   sent: Send,
@@ -54,11 +53,15 @@ export default function AccountDetailPage() {
   const params = useParams();
   const accountId = params.id as string;
 
-  const account = useMemo(() => mockAccounts.find((a) => a.id === accountId), [accountId]);
-  const contacts = useMemo(() => mockContacts.filter((c) => c.accountId === accountId), [accountId]);
+  const accounts = useAppStore((s) => s.accounts);
+  const allContacts = useAppStore((s) => s.contacts);
+  const allActivities = useAppStore((s) => s.activities);
+
+  const account = useMemo(() => accounts.find((a) => a.id === accountId), [accounts, accountId]);
+  const contacts = useMemo(() => allContacts.filter((c) => c.accountId === accountId), [allContacts, accountId]);
   const activities = useMemo(
-    () => mockActivities.filter((a) => a.accountName === account?.name).slice(0, 6),
-    [account]
+    () => allActivities.filter((a) => a.accountName === account?.name).slice(0, 6),
+    [allActivities, account]
   );
 
   if (!account) {
@@ -71,15 +74,15 @@ export default function AccountDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link href="/accounts" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700">
+      <Link href="/accounts" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900">
         <ArrowLeft className="h-4 w-4" /> 계정 목록으로
       </Link>
 
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-blue-100">
-              <Building2 className="h-7 w-7 text-blue-600" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gray-50">
+              <Building2 className="h-7 w-7 text-gray-500" />
             </div>
             <div>
               <div className="flex items-center gap-3">
@@ -91,7 +94,7 @@ export default function AccountDetailPage() {
                 <span className="flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" />{account.industry}</span>
                 <span className="flex items-center gap-1"><UsersIcon className="h-3.5 w-3.5" />{account.employeeCount}명</span>
                 <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{account.region}</span>
-                <a href={account.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
+                <a href={account.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-gray-500 hover:text-gray-900 hover:underline">
                   <Globe className="h-3.5 w-3.5" />{account.website}
                 </a>
               </div>
@@ -100,13 +103,13 @@ export default function AccountDetailPage() {
           <div className="flex gap-2">
             <Link
               href={`/email-studio?accountId=${account.id}`}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
             >
               <Mail className="h-4 w-4" /> 메일 작성
             </Link>
             <Link
               href={`/contacts?accountId=${account.id}`}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50"
             >
               <UsersIcon className="h-4 w-4" /> 담당자 보기
             </Link>
@@ -115,26 +118,26 @@ export default function AccountDetailPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-5 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-blue-600" />
-            <h2 className="text-base font-semibold text-blue-900">AI 분석 요약</h2>
+            <FileText className="h-5 w-5 text-gray-500" />
+            <h2 className="text-base font-semibold text-gray-900">AI 분석 요약</h2>
           </div>
-          <p className="mt-3 text-sm leading-relaxed text-gray-700">{account.aiSummary}</p>
+          <p className="mt-3 text-sm leading-relaxed text-gray-500">{account.aiSummary}</p>
           <div className="mt-4">
-            <p className="text-xs font-medium text-blue-700">예상 고충 포인트</p>
+            <p className="text-xs font-medium text-gray-900">예상 고충 포인트</p>
             <ul className="mt-2 space-y-1">
               {account.painPoints.map((point, i) => (
-                <li key={i} className="flex items-center gap-2 text-sm text-gray-700">
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+                <li key={i} className="flex items-center gap-2 text-sm text-gray-500">
+                  <span className="h-1.5 w-1.5 rounded-full bg-gray-500" />
                   {point}
                 </li>
               ))}
             </ul>
           </div>
           <div className="mt-4">
-            <p className="text-xs font-medium text-blue-700">추천 접근 톤</p>
-            <p className="mt-1 text-sm text-gray-700">{account.recommendedTone}</p>
+            <p className="text-xs font-medium text-gray-900">추천 접근 톤</p>
+            <p className="mt-1 text-sm text-gray-500">{account.recommendedTone}</p>
           </div>
         </div>
 
@@ -149,13 +152,13 @@ export default function AccountDetailPage() {
                 return (
                   <div key={signal.id} className="rounded-lg border border-gray-100 p-4 transition-colors hover:bg-gray-50">
                     <div className="flex items-start gap-3">
-                      <div className="mt-0.5 rounded-lg bg-amber-100 p-2">
-                        <Icon className="h-4 w-4 text-amber-600" />
+                      <div className="mt-0.5 rounded-lg bg-gray-50 p-2">
+                        <Icon className="h-4 w-4 text-gray-500" />
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-900">{signal.title}</p>
-                        <p className="mt-0.5 text-sm text-gray-600">{signal.description}</p>
-                        <div className="mt-1.5 flex items-center gap-3 text-xs text-gray-400">
+                        <p className="mt-0.5 text-sm text-gray-500">{signal.description}</p>
+                        <div className="mt-1.5 flex items-center gap-3 text-xs text-gray-500">
                           <span>{signal.date}</span>
                           <span>출처: {signal.source}</span>
                         </div>
@@ -190,16 +193,16 @@ export default function AccountDetailPage() {
               {contacts.map((contact) => (
                 <tr key={contact.id} className="border-b border-gray-50 transition-colors hover:bg-gray-50">
                   <td className="px-5 py-3 text-sm font-medium text-gray-900">{contact.name}</td>
-                  <td className="px-5 py-3 text-sm text-gray-600">{contact.title}</td>
-                  <td className="px-5 py-3 text-sm text-gray-600">{contact.department}</td>
+                  <td className="px-5 py-3 text-sm text-gray-500">{contact.title}</td>
+                  <td className="px-5 py-3 text-sm text-gray-500">{contact.department}</td>
                   <td className="px-5 py-3">
                     <StatusBadge type="role" value={contact.role} />
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-16 overflow-hidden rounded-full bg-gray-200">
+                      <div className="h-2 w-16 overflow-hidden rounded-full bg-gray-50">
                         <div
-                          className="h-full rounded-full bg-blue-500"
+                          className="h-full rounded-full bg-gray-500"
                           style={{ width: `${contact.aiConfidence}%` }}
                         />
                       </div>
@@ -215,7 +218,7 @@ export default function AccountDetailPage() {
                   <td className="px-5 py-3">
                     <Link
                       href={`/email-studio?accountId=${account.id}&contactId=${contact.id}`}
-                      className="rounded-md px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50"
+                      className="rounded-md px-3 py-1.5 text-xs font-medium text-gray-900 hover:bg-gray-50"
                     >
                       메일 작성 선택
                     </Link>
@@ -240,12 +243,12 @@ export default function AccountDetailPage() {
                 const Icon = activityIcons[activity.type] || FileText;
                 return (
                   <div key={activity.id} className="flex gap-3">
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100">
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-50">
                       <Icon className="h-3.5 w-3.5 text-gray-500" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-700">{activity.description}</p>
-                      <p className="mt-0.5 text-xs text-gray-400">
+                      <p className="text-sm text-gray-900">{activity.description}</p>
+                      <p className="mt-0.5 text-xs text-gray-500">
                         {format(new Date(activity.timestamp), "M월 d일 HH:mm", { locale: ko })}
                       </p>
                     </div>
